@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Faithful Decision Companion</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Montserrat:wght@300;400;500;600&display=swap');
+
+  :root {
+    --teal-deep: #3b5258;
+    --teal-mid: #5e9997;
+    --teal-light: #9abfbe;
+    --warm-sand: #d8ba8d;
+    --warm-cream: #f8ecd9;
+    --accent-orange: #d56c1f;
+    --white-soft: #fdfaf6;
+    --text-dark: #2c3e3f;
+    --text-mid: #5a6e6f;
+    --text-light: #8fa4a5;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Montserrat', sans-serif;
+    background: var(--warm-cream);
+    color: var(--text-dark);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Subtle top border */
+  body::before {
+    content: '';
+    display: block;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, var(--teal-mid), var(--warm-sand), var(--teal-light));
+    flex-shrink: 0;
+  }
+
+  .app-wrapper {
+    width: 100%;
+    max-width: 680px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 0 16px 40px;
+  }
+
+  /* Header */
+  .header {
+    padding: 28px 0 20px;
+    text-align: center;
+    border-bottom: 1px solid rgba(94, 153, 151, 0.2);
+    margin-bottom: 8px;
+  }
+
+  .header-leaf {
+    font-size: 18px;
+    color: var(--teal-mid);
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  .header h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 400;
+    font-size: 22px;
+    color: var(--teal-deep);
+    letter-spacing: 0.04em;
+  }
+
+  .header p {
+    font-size: 11px;
+    font-weight: 300;
+    color: var(--text-light);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  /* Step indicator */
+  .step-indicator {
+    display: none;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 0 6px;
+    flex-wrap: wrap;
+  }
+
+  .step-indicator.visible { display: flex; }
+
+  .step-dot {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--text-light);
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid transparent;
+    transition: all 0.3s ease;
+  }
+
+  .step-dot.active {
+    color: var(--teal-deep);
+    border-color: var(--teal-light);
+    background: rgba(154, 191, 190, 0.15);
+  }
+
+  .step-dot.done {
+    color: var(--teal-mid);
+  }
+
+  /* Chat area */
+  .chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    scroll-behavior: smooth;
+  }
+
+  /* Messages */
+  .msg {
+    display: flex;
+    flex-direction: column;
+    animation: fadeUp 0.4s ease forwards;
+    opacity: 0;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .msg.companion { align-items: flex-start; }
+  .msg.user      { align-items: flex-end; }
+
+  .bubble {
+    max-width: 88%;
+    padding: 14px 18px;
+    border-radius: 18px;
+    font-size: 14.5px;
+    line-height: 1.7;
+    font-weight: 300;
+  }
+
+  .companion .bubble {
+    background: var(--white-soft);
+    color: var(--text-dark);
+    border-radius: 4px 18px 18px 18px;
+    box-shadow: 0 1px 4px rgba(59, 82, 88, 0.08);
+  }
+
+  .user .bubble {
+    background: var(--teal-deep);
+    color: #e8f0f0;
+    border-radius: 18px 18px 4px 18px;
+    font-weight: 400;
+  }
+
+  /* Scripture inline block — lives inside companion bubble */
+  .scripture-card {
+    background: rgba(94, 153, 151, 0.10);
+    border-radius: 8px;
+    padding: 11px 13px;
+    margin-top: 12px;
+    margin-bottom: 2px;
+  }
+
+  .scripture-verse {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 15px;
+    color: var(--teal-deep);
+    line-height: 1.65;
+    margin-bottom: 4px;
+  }
+
+  .scripture-ref {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent-orange);
+    letter-spacing: 0.05em;
+    margin-bottom: 9px;
+  }
+
+  .scripture-prayer {
+    font-size: 13px;
+    color: var(--text-mid);
+    font-style: italic;
+    line-height: 1.6;
+  }
+
+  .scripture-prayer::before {
+    content: '🙏 ';
+    font-style: normal;
+    font-size: 12px;
+  }
+
+  /* Journal output */
+  .journal-card {
+    background: var(--white-soft);
+    border: 1px solid rgba(154, 191, 190, 0.4);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin-top: 10px;
+    font-size: 13.5px;
+    line-height: 1.75;
+  }
+
+  .journal-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--teal-deep);
+    margin-bottom: 4px;
+  }
+
+  .journal-subtitle {
+    font-size: 11px;
+    color: var(--text-light);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(154, 191, 190, 0.3);
+  }
+
+  .journal-section {
+    margin-bottom: 16px;
+  }
+
+  .journal-section h3 {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent-orange);
+    margin-bottom: 6px;
+  }
+
+  .journal-section p {
+    color: var(--text-dark);
+    font-size: 13.5px;
+  }
+
+  .journal-footer {
+    font-size: 11px;
+    color: var(--text-light);
+    border-top: 1px solid rgba(154,191,190,0.25);
+    padding-top: 10px;
+    margin-top: 14px;
+    font-style: italic;
+  }
+
+  .copy-btn {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 8px 18px;
+    background: var(--teal-mid);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .copy-btn:hover { background: var(--teal-deep); }
+
+  /* Thinking indicator */
+  .thinking {
+    display: flex;
+    gap: 5px;
+    padding: 14px 18px;
+    background: var(--white-soft);
+    border-radius: 4px 18px 18px 18px;
+    width: fit-content;
+    box-shadow: 0 1px 4px rgba(59, 82, 88, 0.08);
+  }
+
+  .thinking span {
+    width: 7px; height: 7px;
+    background: var(--teal-light);
+    border-radius: 50%;
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  .thinking span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes pulse {
+    0%, 80%, 100% { transform: scale(0.7); opacity: 0.5; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Quick choice buttons */
+  .quick-choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .choice-btn {
+    padding: 8px 16px;
+    border: 1.5px solid var(--teal-light);
+    background: transparent;
+    color: var(--teal-deep);
+    border-radius: 20px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .choice-btn:hover {
+    background: var(--teal-deep);
+    border-color: var(--teal-deep);
+    color: white;
+  }
+
+  /* Input area */
+  .input-area {
+    padding: 14px 0 0;
+    border-top: 1px solid rgba(154,191,190,0.25);
+    margin-top: 8px;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+
+  textarea {
+    flex: 1;
+    min-height: 48px;
+    max-height: 140px;
+    padding: 12px 16px;
+    border: 1.5px solid rgba(154, 191, 190, 0.5);
+    border-radius: 24px;
+    background: var(--white-soft);
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px;
+    font-weight: 300;
+    color: var(--text-dark);
+    resize: none;
+    outline: none;
+    line-height: 1.5;
+    transition: border-color 0.2s;
+    overflow-y: auto;
+  }
+
+  textarea:focus { border-color: var(--teal-mid); }
+  textarea::placeholder { color: var(--text-light); }
+
+  .send-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--teal-deep);
+    border: none;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.2s, transform 0.1s;
+  }
+
+  .send-btn:hover { background: var(--teal-mid); }
+  .send-btn:active { transform: scale(0.95); }
+  .send-btn:disabled { background: var(--text-light); cursor: not-allowed; }
+
+  .send-btn svg { width: 18px; height: 18px; }
+
+  .input-note {
+    font-size: 11px;
+    color: var(--text-light);
+    text-align: center;
+    margin-top: 8px;
+    font-weight: 300;
+    letter-spacing: 0.02em;
+  }
+
+  @media (max-width: 480px) {
+    .bubble { font-size: 14px; max-width: 95%; }
+    .header h1 { font-size: 19px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+  <div class="header">
+    <span class="header-leaf">🌿</span>
+    <h1>Faithful Decision Companion</h1>
+    <p>Balanced 4 Success</p>
+  </div>
+
+  <div class="step-indicator" id="stepIndicator">
+    <span class="step-dot" data-step="P">P — Pray</span>
+    <span class="step-dot" data-step="A">A — Analyze</span>
+    <span class="step-dot" data-step="U">U — Capacity</span>
+    <span class="step-dot" data-step="S">S — Scripture</span>
+    <span class="step-dot" data-step="E">E — Evaluate</span>
+  </div>
+
+  <div class="chat-area" id="chatArea"></div>
+
+  <div class="input-area">
+    <div class="input-row">
+      <textarea
+        id="userInput"
+        placeholder="Share what's on your heart…"
+        rows="1"
+        onkeydown="handleKeyDown(event)"
+        oninput="autoResize(this)"
+      ></textarea>
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </div>
+    <div class="input-note">This conversation isn't saved to any account or profile. Nothing here is stored once you close this tab — your responses stay between you and God.</div>
+  </div>
+
+</div>
+
+<script>
+// ── Scripture Library ──────────────────────────────────────────────
+const SCRIPTURES = {
+  P: [
+    { verse: "If any of you lacks wisdom, you should ask God, who gives generously to all without finding fault, and it will be given to you.", ref: "James 1:5", version: "NIV", prayer: "Lord, I ask for Your wisdom today. Quiet my doubts and guide my thoughts so I can move in Your truth." },
+    { verse: "Trust in the Lord with all your heart; do not depend on your own understanding. Seek his will in all you do, and he will show you which path to take.", ref: "Proverbs 3:5–6", version: "NLT", prayer: "God, help me trust You more than my own understanding. Show me the right path to take." },
+    { verse: "And your ears shall hear a word behind you, saying, 'This is the way, walk in it,' when you turn to the right or when you turn to the left.", ref: "Isaiah 30:21", version: "ESV", prayer: "Holy Spirit, guide me clearly. Help me hear Your voice above all others as I choose my next step." }
+  ],
+  A: [
+    { verse: "The simple believe anything, but the prudent give thought to their steps.", ref: "Proverbs 14:15", version: "NIV", prayer: "Father, give me a sound mind. Help me see truth apart from fear or emotion." },
+    { verse: "Fix your thoughts on what is true, and honorable, and right, and pure, and lovely, and admirable.", ref: "Philippians 4:8", version: "NLT", prayer: "Lord, help me focus on what is true and good, not just what feels urgent or heavy." },
+    { verse: "And ye shall know the truth, and the truth shall make you free.", ref: "John 8:32", version: "KJV", prayer: "Jesus, help me separate truth from lies, so I can decide in freedom, not fear." }
+  ],
+  U: [
+    { verse: "The spirit is willing, but the flesh is weak.", ref: "Matthew 26:41", version: "NIV", prayer: "Lord, teach me to honor my limits with grace. Help me see rest as wisdom, not failure." },
+    { verse: "The Lord replied, 'My Presence will go with you, and I will give you rest.'", ref: "Exodus 33:14", version: "NLT", prayer: "God, remind me that Your presence is with me. Let me walk in rest, not pressure." },
+    { verse: "My flesh and my heart may fail, but God is the strength of my heart and my portion forever.", ref: "Psalm 73:26", version: "ESV", prayer: "Father, be my strength when I feel weak. Show me how to move within my true capacity." }
+  ],
+  S: [
+    { verse: "Your word is a lamp to my feet, a light on my path.", ref: "Psalm 119:105", version: "NIV", prayer: "Holy Spirit, light my way through Your Word. Show me truth for this moment." },
+    { verse: "For the word of God is alive and powerful. It is sharper than the sharpest two-edged sword…", ref: "Hebrews 4:12", version: "NLT", prayer: "Lord, let Your living Word shape my thoughts and steady my choices." },
+    { verse: "For whatever was written in former days was written for our instruction, that through endurance and the encouragement of the Scriptures we might have hope.", ref: "Romans 15:4", version: "ESV", prayer: "God, give me hope and encouragement through Your Word as I decide today." }
+  ],
+  E: [
+    { verse: "In all your ways submit to him, and he will make your paths straight.", ref: "Proverbs 3:6", version: "NIV", prayer: "Lord, help me choose the path that honors You. Direct my steps with peace." },
+    { verse: "But the Holy Spirit produces this kind of fruit in our lives: love, joy, peace, patience, kindness, goodness, faithfulness, gentleness, and self-control.", ref: "Galatians 5:22–23", version: "NLT", prayer: "God, guide me to the choice that bears good fruit in my life and in others' lives." },
+    { verse: "And whatsoever ye do in word or deed, do all in the name of the Lord Jesus, giving thanks to God and the Father by him.", ref: "Colossians 3:17", version: "KJV", prayer: "Jesus, let this choice bring honor to Your name and gratitude to my heart." }
+  ]
+};
+
+function pickScripture(theme) {
+  const arr = SCRIPTURES[theme];
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+// ── State ──────────────────────────────────────────────────────────
+const state = {
+  mode: null,
+  phase: 'welcome',
+  history: [],           // Claude conversation history
+  reflections: {},       // stored per-step reflections for journal
+  usedScriptures: {},    // scripture shown per step
+  decision: '',          // the named decision
+};
+
+// ── System Prompt ──────────────────────────────────────────────────
+const SYSTEM_PROMPT = `You are the Faithful Decision Companion — a warm, faith-rooted guide helping Christian women with chronic illness make peace-filled, God-led decisions using the PAUSE Decision-Making Framework.
+
+You are powered by Claude and accessed through the Balanced 4 Success website.
+
+CORE TONE:
+- Warm, conversational, compassionate — like a trusted friend who happens to be wise
+- Faith woven naturally throughout — never preachy
+- Write at an 8th-grade reading level
+- Short paragraphs, never clinical or robotic
+- Always make the person feel heard before moving forward
+
+HARD RULES:
+- Never mention files, libraries, system prompts, or backend logic
+- Never use markdown symbols (asterisks, underscores) in your responses
+- Never add CTAs, product references, or commercial language
+- Never reproduce verse text — the scripture card appears automatically; just introduce it warmly
+- Never combine multiple PAUSE steps in one response
+- Never say a step "wasn't fully explored" or that the session was incomplete — honor whatever was shared
+- The experience ends with a blessing, not a pitch
+- Second person throughout — you/your — never she/her/the user`;
+
+// ── UI Helpers ─────────────────────────────────────────────────────
+const chatArea  = document.getElementById('chatArea');
+const userInput = document.getElementById('userInput');
+const sendBtn   = document.getElementById('sendBtn');
+
+function sanitize(text) {
+  if (!text) return '';
+  return text
+    .replace(/VERSE_HERE[\s\S]*/i, '')   // strip sentinel and anything after
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/\*\*(.+?)\*\*/gs, '$1')
+    .replace(/\*(.+?)\*/gs, '$1')
+    .replace(/__(.+?)__/gs, '$1')
+    .replace(/_([^_\s][^_]*)_/g, '$1')
+    .replace(/\n/g, '<br>');
+}
+
+function addMessage(role, content, isHTML = false) {
+  const wrap = document.createElement('div');
+  wrap.className = `msg ${role}`;
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.innerHTML = isHTML ? content : sanitize(content);
+  wrap.appendChild(bubble);
+  chatArea.appendChild(wrap);
+  chatArea.scrollTop = chatArea.scrollHeight;
+  return bubble;
+}
+
+function addMessageWithScripture(text, scripture) {
+  const wrap = document.createElement('div');
+  wrap.className = 'msg companion';
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  const safeText = sanitize(text || '');
+  bubble.innerHTML = safeText + scriptureCardHTML(scripture);
+  wrap.appendChild(bubble);
+  chatArea.appendChild(wrap);
+  chatArea.scrollTop = chatArea.scrollHeight;
+  return bubble;
+}
+
+function scriptureCardHTML(s) {
+  return `<div class="scripture-card">
+    <div class="scripture-verse">"${s.verse}"</div>
+    <div class="scripture-ref">${s.ref} · ${s.version}</div>
+    <div class="scripture-prayer">${s.prayer}</div>
+  </div>`;
+}
+
+function showThinking() {
+  const wrap = document.createElement('div');
+  wrap.className = 'msg companion';
+  wrap.id = 'thinking';
+  wrap.innerHTML = `<div class="thinking"><span></span><span></span><span></span></div>`;
+  chatArea.appendChild(wrap);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function removeThinking() {
+  const t = document.getElementById('thinking');
+  if (t) t.remove();
+}
+
+function addQuickChoices(choices) {
+  const last = chatArea.lastElementChild;
+  if (!last) return;
+  const bubble = last.querySelector('.bubble');
+  if (!bubble) return;
+  const row = document.createElement('div');
+  row.className = 'quick-choices';
+  choices.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.textContent = c.label;
+    btn.onclick = () => {
+      document.querySelectorAll('.quick-choices').forEach(r => r.remove());
+      handleChoice(c.value);
+    };
+    row.appendChild(btn);
+  });
+  bubble.appendChild(row);
+}
+
+function updateStepIndicator(activeStep) {
+  const order = ['P','A','U','S','E'];
+  const idx = order.indexOf(activeStep);
+  const indicator = document.getElementById('stepIndicator');
+  if (idx >= 0) {
+    indicator.classList.add('visible');
+    indicator.querySelectorAll('.step-dot').forEach((dot, i) => {
+      dot.classList.remove('active','done');
+      if (i === idx) dot.classList.add('active');
+      else if (i < idx) dot.classList.add('done');
+    });
+  }
+}
+
+function setInput(enabled, placeholder) {
+  userInput.disabled = !enabled;
+  sendBtn.disabled = !enabled;
+  if (placeholder) userInput.placeholder = placeholder;
+}
+
+// ── Fresh API Call (for journal compile — no history, higher tokens) ──
+async function askFresh(instruction) {
+  const res = await fetch('https://faithful-decision-proxy.shannon-fa8.workers.dev', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      system: 'You are a helpful assistant that compiles faith-based decision journals. Return only valid JSON when asked. Never use markdown fences. Never add text before or after the JSON object.',
+      messages: [{ role: 'user', content: instruction }]
+    })
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(`API ${res.status}: ${data?.error?.message || 'error'}`);
+  if (data.type === 'error') throw new Error(data?.error?.message || 'API error');
+
+  return data.content?.find(b => b.type === 'text')?.text || '';
+}
+
+// ── API Call ───────────────────────────────────────────────────────
+async function ask(userText, instruction) {
+  const messages = [...state.history];
+  const content = instruction
+    ? `[GUIDE: ${instruction}]\n\nUser: ${userText}`
+    : userText;
+  messages.push({ role: 'user', content });
+
+  const res = await fetch('https://faithful-decision-proxy.shannon-fa8.workers.dev', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1500,
+      system: SYSTEM_PROMPT,
+      messages
+    })
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(`API ${res.status}: ${data?.error?.message || 'error'}`);
+  if (data.type === 'error') throw new Error(data?.error?.message || 'API error');
+
+  const reply = data.content?.find(b => b.type === 'text')?.text || '';
+
+  // Store in history with clean user text
+  state.history.push({ role: 'user', content: userText });
+  state.history.push({ role: 'assistant', content: reply });
+
+  return reply;
+}
+
+// ── Journal Render ─────────────────────────────────────────────────
+function renderJournal(j) {
+  const steps = [
+    { key: 'P', label: 'P — Pray for Wisdom' },
+    { key: 'A', label: 'A — Analyze Objectively' },
+    { key: 'U', label: 'U — Understand Capacity' },
+    { key: 'S', label: 'S — Search Scripture' },
+    { key: 'E', label: 'E — Evaluate Outcomes' }
+  ];
+
+  let stepsHTML = '';
+  steps.forEach(s => {
+    const reflection = j.steps?.[s.key] || '';
+    const sc = state.usedScriptures[s.key];
+    stepsHTML += `<div class="journal-section">
+      <h3>${s.label}</h3>
+      <p>${reflection}</p>
+      ${sc ? `<div style="font-style:italic;color:var(--teal-mid);font-size:13px;margin-top:8px;">"${sc.verse}" — ${sc.ref} (${sc.version})</div>` : ''}
+    </div>`;
+  });
+
+  const addl = j.additional && j.additional.trim() && j.additional !== 'None shared'
+    ? `<div class="journal-section"><h3>Additional Considerations</h3><p>${j.additional}</p></div>` : '';
+
+  let threadsHTML = '';
+  if (j.discernmentThreads && Array.isArray(j.discernmentThreads) && j.discernmentThreads.length) {
+    const threadItems = j.discernmentThreads.map((t, i) =>
+      `<p style="font-weight:500;margin-top:10px;color:var(--teal-deep);">${i+1}. ${t.theme}</p>` +
+      (t.observations || []).map(o => `<p style="padding-left:12px;margin-top:2px;">• ${o}</p>`).join('')
+    ).join('');
+    threadsHTML = `<div class="journal-section"><h3>Discernment Reflections</h3>${threadItems}</div>`;
+  } else if (j.discernmentThreads && typeof j.discernmentThreads === 'string') {
+    threadsHTML = `<div class="journal-section"><h3>Discernment Reflections</h3><p style="white-space:pre-line">${j.discernmentThreads}</p></div>`;
+  }
+
+  return `<div class="journal-card" id="journalCard">
+    <div class="journal-title">Faithful Decision Journal</div>
+    <div class="journal-subtitle">PAUSE Decision-Making Framework™</div>
+    <div class="journal-section"><h3>Decision</h3><p>${j.decisionSummary || ''}</p></div>
+    ${stepsHTML}
+    ${addl}
+    ${threadsHTML}
+    <div class="journal-section">
+      <h3>Gentle Recommendation</h3>
+      <p>${j.recommendation || ''}</p>
+      <p style="font-size:12px;color:var(--text-light);margin-top:8px;font-style:italic;">${j.disclaimer || ''}</p>
+    </div>
+    <div class="journal-footer">Based on the PAUSE Decision-Making Framework™ | Balanced 4 Success</div>
+  </div>
+  <button class="copy-btn" onclick="copyJournal()">Copy Journal</button>`;
+}
+
+function copyJournal() {
+  const card = document.getElementById('journalCard');
+  if (!card) return;
+  let text = 'FAITHFUL DECISION JOURNAL\nPAUSE Decision-Making Framework™ | Balanced 4 Success\n' + '─'.repeat(50) + '\n\n';
+  card.querySelectorAll('.journal-section').forEach(sec => {
+    const h = sec.querySelector('h3')?.textContent || '';
+    const p = [...sec.querySelectorAll('p')].map(el => el.textContent).join('\n');
+    const v = sec.querySelector('div[style]')?.textContent || '';
+    text += `${h.toUpperCase()}\n${p}\n${v}\n\n`;
+  });
+  navigator.clipboard.writeText(text).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  });
+  const btn = document.querySelector('.copy-btn');
+  if (btn) { btn.textContent = 'Copied ✓'; setTimeout(() => btn.textContent = 'Copy Journal', 2000); }
+}
+
+// ── Journal Compile ────────────────────────────────────────────────
+async function compileJournal() {
+  state.phase = 'compiling';
+  setInput(false);
+  showThinking();
+
+  // Build explicit step summaries from stored reflections
+  const r = state.reflections;
+  const stepSummaries = `
+Decision named: ${state.decision}
+P step — what the user shared about prayer: ${r.P || 'not recorded'}
+A step — facts and emotions they shared: ${r.A || 'not recorded'}
+U step — their capacity right now: ${r.U || 'not recorded'}
+S step — scripture or principles they named: ${r.S || 'not recorded'}
+E step — outcomes and fruit they reflected on: ${r.E || 'not recorded'}
+Additional factors: ${r.additional || 'none'}
+  `.trim();
+
+  const instruction = `Using ONLY the step summaries below, compile a rich Faithful Decision Journal. Write entirely in second person (you/your — never she/her/the user). Be specific to what was actually shared — never say a step was incomplete or unexplored. Return ONLY a valid JSON object. No markdown. No text before or after. Start with { and end with }:
+{
+  "decisionSummary": "2-3 sentences in second person describing the specific decision and its context",
+  "steps": {
+    "P": "1-2 sentences in second person about what was shared in the Pray step",
+    "A": "2-3 sentences in second person naming the specific facts AND emotions they shared",
+    "U": "2-3 sentences in second person naming their specific capacity and what it means for this decision",
+    "S": "1-2 sentences in second person about the scripture or principles they engaged with",
+    "E": "2-3 sentences in second person about the specific fruit they named for each path"
+  },
+  "additional": "summarize additional factors in second person, or empty string if none",
+  "discernmentThreads": [
+    {"theme": "Theme name 1", "observations": ["observation 1", "observation 2"]},
+    {"theme": "Theme name 2", "observations": ["observation 1", "observation 2"]},
+    {"theme": "Theme name 3", "observations": ["observation 1", "observation 2"]}
+  ],
+  "recommendation": "3-4 warm sentences in second person — a gentle but specific recommendation grounded in what was shared, naming the path most aligned with peace and capacity. End with an encouraging phrase.",
+  "disclaimer": "This guidance is spiritual support only — not medical, legal, or professional advice. Please seek wise counsel where needed."
+}
+
+STEP SUMMARIES:
+${stepSummaries}`;
+
+  try {
+    const raw = await askFresh(instruction);
+    let cleaned = raw.replace(/```json|```/g, '').trim();
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) cleaned = match[0];
+
+    let j;
+    try {
+      j = JSON.parse(cleaned);
+    } catch (e) {
+      // Retry once with even stricter instruction
+      const retryInstruction = `Return ONLY a valid JSON object. Start with { end with }. No other text. Use this structure exactly: {"decisionSummary":"...","steps":{"P":"...","A":"...","U":"...","S":"...","E":"..."},"additional":"...","discernmentThreads":[{"theme":"...","observations":["...","..."]}],"recommendation":"...","disclaimer":"This guidance is spiritual support only — not medical, legal, or professional advice. Please seek wise counsel where needed."}\n\nDATA:\n${stepSummaries}`;
+      const raw2 = await askFresh(retryInstruction);
+      const match2 = raw2.replace(/```json|```/g, '').trim().match(/\{[\s\S]*\}/);
+      try {
+        j = JSON.parse(match2 ? match2[0] : raw2);
+      } catch (e2) {
+        removeThinking();
+        addMessage('companion', "Something quiet happened preparing your journal. Please tap \"Yes, create my journal\" to try once more. 🌿");
+        state.phase = 'additional_confirm';
+        addQuickChoices([{ label: 'Yes, create my journal', value: 'journal_compile' }]);
+        setInput(true);
+        return;
+      }
+    }
+
+    removeThinking();
+    addMessage('companion', "Your Faithful Decision Journal is ready. It's formatted so you can copy and save it anywhere — a notes app, a document, or your email.\n\nThis conversation isn't saved to any account or profile. Nothing here is stored once you close this tab — your responses stay between you and God.");
+    addMessage('companion', renderJournal(j), true);
+    setTimeout(() => {
+      addMessage('companion', "You've done something meaningful today. You paused. You prayed. You let God into the process.\n\nThat's not a small thing — especially when the day is hard.\n\nMay you walk forward with peace in your heart and trust in the One who holds every step. 🌿");
+      state.phase = 'done';
+      setTimeout(() => showContinuation(), 600);
+    }, 800);
+
+  } catch (err) {
+    removeThinking();
+    addMessage('companion', "It looks like something interrupted the connection. Please give it a moment and try again. 🌿");
+    state.phase = 'additional_confirm';
+    addQuickChoices([{ label: 'Try again', value: 'journal_compile' }]);
+    setInput(true);
+    console.error(err);
+  }
+}
+
+// ── Review Journal Compile ─────────────────────────────────────────
+async function compileReviewJournal() {
+  state.phase = 'compiling';
+  setInput(false);
+  showThinking();
+
+  const r = state.reflections;
+  const stepSummaries = `
+Decision reviewed: ${state.decision}
+P — what they noticed about prayer when this decision was made: ${r.P || 'not recorded'}
+A — how facts compared to fears in retrospect: ${r.A || 'not recorded'}
+U — whether the decision honored their capacity: ${r.U || 'not recorded'}
+S — what scriptures guided them: ${r.S || 'not recorded'}
+E — what fruit has been seen since: ${r.E || 'not recorded'}
+  `.trim();
+
+  const instruction = `Using ONLY the step summaries below, compile a Review Journal. Write entirely in second person (you/your). Be specific and warm. Return ONLY a JSON object:
+{
+  "decisionSummary": "2-3 sentences describing the past decision reflected on",
+  "steps": {
+    "P": "1-2 sentences about what was noticed regarding prayer",
+    "A": "1-2 sentences about facts vs fears in retrospect",
+    "U": "1-2 sentences about capacity in that season",
+    "S": "1-2 sentences about scripture that guided them",
+    "E": "1-2 sentences about the fruit seen since"
+  },
+  "additional": "",
+  "recommendation": "2-3 warm sentences about what was learned and can be carried forward",
+  "disclaimer": "This reflection is offered as spiritual support only — not medical, legal, or professional advice."
+}
+
+STEP SUMMARIES:
+${stepSummaries}`;
+
+  try {
+    const raw = await askFresh(instruction);
+    let cleaned = raw.replace(/```json|```/g, '').trim();
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) cleaned = match[0];
+    let j;
+    try { j = JSON.parse(cleaned); }
+    catch (e) {
+      j = {
+        decisionSummary: `You reflected on the decision: ${state.decision}`,
+        steps: { P: r.P||'', A: r.A||'', U: r.U||'', S: r.S||'', E: r.E||'' },
+        additional: '',
+        discernmentThreads: [],
+        recommendation: "What you've reflected on today carries wisdom. Carry it forward with grace.",
+        disclaimer: "This reflection is offered as spiritual support only — not medical, legal, or professional advice."
+      };
+    }
+
+    removeThinking();
+    addMessage('companion', "Your Review Journal is ready. Copy and save it anywhere you'd like.\n\nThis conversation isn't saved to any account or profile. Nothing here is stored once you close this tab — your responses stay between you and God.");
+    addMessage('companion', renderJournal(j), true);
+    setTimeout(() => {
+      addMessage('companion', "May you carry what you've learned with grace. God sees your faithfulness — in the decisions that went well and in the ones that taught you something new. Rest in that. 🌿");
+      state.phase = 'done';
+      setTimeout(() => showContinuation(), 600);
+    }, 800);
+
+  } catch (err) {
+    removeThinking();
+    addMessage('companion', "Something quiet happened. Please try again. 🌿");
+    addQuickChoices([{ label: 'Try again', value: 'review_journal_yes' }]);
+    setInput(true);
+    console.error(err);
+  }
+}
+
+// ── Continuation ───────────────────────────────────────────────────
+function showContinuation() {
+  const wrap = document.createElement('div');
+  wrap.className = 'msg companion';
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.innerHTML = sanitize("Is there something else on your heart today?");
+  const row = document.createElement('div');
+  row.className = 'quick-choices';
+  row.style.marginTop = '10px';
+  [
+    { label: 'Work through a new decision', value: 'new_full' },
+    { label: 'Reflect on another past decision', value: 'new_review' },
+    { label: "I'm done for now", value: 'new_done' }
+  ].forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.textContent = c.label;
+    btn.onclick = () => {
+      document.querySelectorAll('.quick-choices').forEach(r => r.remove());
+      handleChoice(c.value);
+    };
+    row.appendChild(btn);
+  });
+  bubble.appendChild(row);
+  wrap.appendChild(bubble);
+  chatArea.appendChild(wrap);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function resetState(mode) {
+  state.mode = mode;
+  state.phase = mode === 'full' ? 'P_ask' : 'review_share';
+  state.reflections = {};
+  state.usedScriptures = {};
+  state.decision = '';
+  const indicator = document.getElementById('stepIndicator');
+  if (mode === 'full') {
+    updateStepIndicator('P');
+  } else {
+    indicator.classList.remove('visible');
+    indicator.querySelectorAll('.step-dot').forEach(d => d.classList.remove('active','done'));
+  }
+}
+
+// ── Main Flow ──────────────────────────────────────────────────────
+async function handleInput(userText) {
+  setInput(false);
+  showThinking();
+
+  try {
+    // ── WELCOME ──
+    if (state.phase === 'welcome') {
+      const lower = userText.toLowerCase().trim();
+      let mode = null;
+      if (['2','reflect','past','already made','review','choice i already'].some(k => lower.includes(k) || lower === k)) mode = 'review';
+      else if (['1','decision','work through','help me','full','step by step'].some(k => lower.includes(k) || lower === k)) mode = 'full';
+
+      if (!mode) {
+        // Let Claude interpret
+        const reply = await ask(userText, `The user described what they need. Gently route them to one of two modes: "full" (working through a current decision) or "review" (reflecting on a past decision). Choose the best fit and begin that mode naturally. For full mode: say "Good. Let's take this one step at a time. 🌿 What decision are you facing? Big or small, name what you need clarity on." For review mode: ask them to share the past decision.`);
+        removeThinking();
+        if (reply.toLowerCase().includes('past') || reply.toLowerCase().includes('reflect')) {
+          resetState('review');
+        } else {
+          resetState('full');
+        }
+        addMessage('companion', reply);
+        setInput(true);
+        return;
+      }
+
+      resetState(mode);
+      removeThinking();
+      if (mode === 'full') {
+        addMessage('companion', "Good. Let's take this one step at a time. 🌿\n\nWhat decision are you facing? Big or small, name what you need clarity on.");
+      } else {
+        addMessage('companion', "Of course. Share the past decision you'd like to reflect on — you can describe it in your own words, or paste a previous journal if you have one.");
+      }
+      setInput(true);
+      return;
+    }
+
+    // ── FULL PAUSE FLOW ──
+    if (state.mode === 'full') {
+
+      // ── Name the decision ──
+      if (state.phase === 'P_ask') {
+        state.decision = userText;
+        state.phase = 'P_prayer';
+        const sc = pickScripture('P');
+        state.usedScriptures.P = sc;
+        const reply = await ask(userText, `The user has named the decision they're facing. Acknowledge it with genuine warmth — reflect back what you heard in 1-2 sentences so they feel understood. Then ask ONLY this one question: "Would you like to pause and share what you're asking God for guidance on with this decision about ${state.decision}?" Do NOT ask about facts, capacity, or anything else. Do NOT transition to any other step. End your response with exactly these five characters on their own: VERSE_HERE`);
+        const clean = reply.replace(/VERSE_HERE[\s\S]*/i, '').trim();
+        removeThinking();
+        addMessageWithScripture(clean, sc);
+        setInput(true);
+        return;
+      }
+
+      // ── Prayer response → A ──
+      if (state.phase === 'P_prayer') {
+        state.reflections.P = userText;
+        state.phase = 'A_ask';
+        updateStepIndicator('A');
+        const sc = pickScripture('A');
+        state.usedScriptures.A = sc;
+        const reply = await ask(userText, `The user answered the prayer question. Receive what they shared with warmth — 1-2 sentences only. Then ask about A — Analyze Objectively. Ask both of these questions with decision-specific examples in parentheses tailored to their decision (${state.decision}):
+
+"What are the facts of this situation?" — give 2-3 relevant examples in parentheses of what facts look like for their specific decision.
+"Are there any emotions, assumptions, or fears that might be clouding your view?" — give 2-3 relevant examples in parentheses of what emotions or fears look like for their specific decision.
+
+Ask both as one natural, warm message. Do NOT ask about capacity, scripture, or anything else. Do NOT transition to any other step. End your response with exactly: VERSE_HERE`);
+        const clean = reply.replace(/VERSE_HERE[\s\S]*/i, '').trim();
+        removeThinking();
+        addMessageWithScripture(clean, sc);
+        setInput(true);
+        return;
+      }
+
+      // ── A response → summary + U ──
+      if (state.phase === 'A_ask') {
+        state.reflections.A = userText;
+        state.phase = 'U_ask';
+        updateStepIndicator('U');
+        const sc = pickScripture('U');
+        state.usedScriptures.U = sc;
+        const reply = await ask(userText, `The user shared the facts and emotions for the Analyze step. First, reflect back what you heard — use "Here's what I'm hearing:" and name their specific facts and feelings in 2-4 sentences. Then ask about U — Understand Capacity with decision-specific examples in parentheses tailored to their decision (${state.decision}):
+
+"What is your current emotional, physical, and spiritual capacity?" — give 2 examples in parentheses relevant to their situation.
+"Would this decision honor your limits, or push beyond them?" — give a brief example in parentheses that connects to their specific decision.
+
+Ask both as one natural, warm message. Do NOT ask about scripture, outcomes, or anything else. Do NOT transition to any other step. End your response with exactly: VERSE_HERE`);
+        const clean = reply.replace(/VERSE_HERE[\s\S]*/i, '').trim();
+        removeThinking();
+        addMessageWithScripture(clean, sc);
+        setInput(true);
+        return;
+      }
+
+      // ── U response → S ──
+      if (state.phase === 'U_ask') {
+        state.reflections.U = userText;
+        state.phase = 'S_ask';
+        updateStepIndicator('S');
+        const sc = pickScripture('S');
+        state.usedScriptures.S = sc;
+        const reply = await ask(userText, `The user shared their capacity. Receive it warmly — 1-2 sentences. Then ask about S — Search Scripture with examples tailored to their decision (${state.decision}):
+
+"Is there a verse or biblical principle that speaks into this decision?" — give 2-3 examples in parentheses of relevant themes like stewardship, trust, provision, wisdom, rest, or peace — tailored specifically to their decision. Then add: "If nothing comes to mind, that's okay — just let me know and I'll offer a few that connect."
+
+Do NOT ask about outcomes or anything else. Do NOT transition to any other step. End your response with exactly: VERSE_HERE`);
+        const clean = reply.replace(/VERSE_HERE[\s\S]*/i, '').trim();
+        removeThinking();
+        addMessageWithScripture(clean, sc);
+        setInput(true);
+        return;
+      }
+
+      // ── S response ──
+      if (state.phase === 'S_ask') {
+        const lower = userText.toLowerCase().trim();
+        const wantsVerse = lower.includes('offer') || lower.includes('provide') || lower.includes('share') || lower.includes('give') || lower === 'no' || lower === 'none' || lower === 'nothing' || lower === 'not really' || lower === 'nope' || lower.startsWith('no ') || lower.startsWith('no,') || lower.startsWith('please') || lower.length < 6;
+
+        if (wantsVerse) {
+          // Offer 2-3 relevant verses and let user choose
+          state.phase = 'S_verse_choice';
+          const reply = await ask(userText, `The user doesn't have a verse in mind. Share 2-3 Scripture verses genuinely relevant to their specific decision: ${state.decision}. For each verse, share the text, reference, and 1 sentence on exactly why it connects to their situation. Then ask: "Do any of these speak to where you are? You're welcome to carry one or more forward into your journal, or I can offer others." Do NOT ask about outcomes or move to any other step. Stop after your question.`);
+          const sClean = reply.replace(/VERSE_HERE[\s\S]*/i, '').trim();
+          removeThinking();
+          addMessage('companion', sClean || reply);
+          setInput(true);
+          return;
+        } else {
+          // They shared their own verse/principle
+          state.reflections.S = userText;
+          state.phase = 'E_ask';
+          updateStepIndicator('E');
+          const sc = pickScripture('E');
+          state.usedScriptures.E = sc;
+          const reply = await ask(userText, `The user shared a verse or biblical principle. Receive it warmly in 1-2 sentences. Then ask about E — Evaluate Outcomes with decision-specific examples in parentheses tailored to their decision (${state.decision}):
+
+"If you move forward with this decision, what fruit do you hope it would produce?" — give 1-2 examples in parentheses relevant to their situation.
+"And if you choose the other path, what fruit might that bring instead?" — give 1-2 examples in parentheses (peace, clarity, freed-up resources, etc.) relevant to their situation.
+"Would either choice draw you closer to God's purpose in this season?"
+
+Ask all as one natural message. Do NOT move to any other step. End your response with exactly: VERSE_HERE`);
+          const clean = reply.replace(/VERSE_HERE[\s\S]*/i, '').trim();
+          removeThinking();
+          addMessageWithScripture(clean, sc);
+          setInput(true);
+          return;
+        }
+      }
+
+      // ── S verse choice response ──
+      if (state.phase === 'S_verse_choice') {
+        state.reflections.S = userText;
+        state.phase = 'E_ask';
+        updateStepIndicator('E');
+        const sc = pickScripture('E');
+        state.usedScriptures.E = sc;
+        const reply = await ask(userText, `The user responded to the scripture options. Receive their response warmly in 1 sentence. Then ask about E — Evaluate Outcomes with decision-specific examples in parentheses tailored to their decision (${state.decision}):
+
+"If you move forward with this decision, what fruit do you hope it would produce?" — give 1-2 examples in parentheses relevant to their situation.
+"And if you choose the other path, what fruit might that bring instead?" — give 1-2 examples in parentheses relevant to their situation.
+"Would either choice draw you closer to God's purpose in this season?"
+
+Ask all as one natural message. Do NOT move to any other step. End your response with exactly: VERSE_HERE`);
+        const clean = reply.replace(/VERSE_HERE[\s\S]*/i, '').trim();
+        removeThinking();
+        addMessageWithScripture(clean, sc);
+        setInput(true);
+        return;
+      }
+
+      // ── E response → additional ──
+      if (state.phase === 'E_ask') {
+        state.reflections.E = userText;
+        state.phase = 'additional';
+        const reply = await ask(userText, `The user reflected on outcomes. Receive their answer with genuine warmth — 2-3 sentences that honor what they said, naming specifically what you heard about their discernment. Then ask: "Before I prepare your Faithful Decision Journal, are there any other factors worth including — like timing, finances, family, or anything else on your heart?" Do NOT write VERSE_HERE. Stop after your question.`);
+        const eClean = reply.replace(/VERSE_HERE[\s\S]*/i, '').trim();
+        removeThinking();
+        addMessage('companion', eClean || reply);
+        setInput(true);
+        return;
+      }
+
+      // ── Additional factors ──
+      if (state.phase === 'additional') {
+        const lower = userText.toLowerCase().trim();
+        const nothingWords = ['no','none','nothing','nope','n/a','no.','nope.','that\'s all','all good','good','done','ready','create','go ahead','yes'];
+        const isNothing = nothingWords.includes(lower) || lower.startsWith('no ') || lower.startsWith('no,') || lower.length <= 4;
+
+        if (isNothing) {
+          state.reflections.additional = '';
+          state.phase = 'additional_confirm';
+          removeThinking();
+          addMessage('companion', "You've done faithful, honest reflection. You're ready for your Faithful Decision Journal.");
+          addQuickChoices([{ label: 'Create my journal', value: 'journal_compile' }]);
+          setInput(true);
+          return;
+        } else {
+          state.reflections.additional = userText;
+          state.phase = 'additional_confirm';
+          // Build hearing summary locally — no Claude call
+          const reply = await ask(userText, `The user shared additional factors. Reflect them back warmly using "Here's what I'm hearing:" followed by 2-4 brief bullets (one line each) naming the key factors they mentioned. Then ask only: "Does this capture everything you'd like included?" Stop after that question.`);
+          removeThinking();
+          addMessage('companion', reply);
+          addQuickChoices([
+            { label: 'Yes, create my journal', value: 'journal_compile' },
+            { label: 'Let me add something', value: 'add_more' }
+          ]);
+          setInput(true);
+          return;
+        }
+      }
+
+      // ── Additional confirm (typed response) ──
+      if (state.phase === 'additional_confirm') {
+        const lower = userText.toLowerCase().trim();
+        const confirmWords = ['yes','correct','right','good','go ahead','ready','done','create','looks good','perfect','that\'s it','that\'s all','yes please','try','again','try again'];
+        if (confirmWords.some(w => lower.includes(w))) {
+          await compileJournal();
+          return;
+        } else {
+          // They're adding more
+          state.reflections.additional += ' ' + userText;
+          const reply = await ask(userText, `The user added more to their additional considerations. Acknowledge what they added in 1 sentence. Update your "Here's what I'm hearing:" bullets to include the new detail. Then ask: "Does this capture everything you'd like included?"`);
+          removeThinking();
+          addMessage('companion', reply);
+          addQuickChoices([
+            { label: 'Yes, create my journal', value: 'journal_compile' },
+            { label: 'Let me add something', value: 'add_more' }
+          ]);
+          setInput(true);
+          return;
+        }
+      }
+    }
+
+    // ── REVIEW MODE ──
+    if (state.mode === 'review') {
+
+      if (state.phase === 'review_share') {
+        state.decision = userText;
+        state.phase = 'review_P';
+        const sc = pickScripture('P');
+        state.usedScriptures.P = sc;
+        const reply = await ask(userText, `The user shared the past decision they want to reflect on. Acknowledge it warmly in 1-2 sentences — name what you heard so they feel understood. Then ask ONLY this: "When you made that decision, did you have a chance to bring it to God in prayer? What do you notice now, looking back at that?" Do NOT move to the next step. End your response with exactly: VERSE_HERE`);
+        const clean = reply.replace(/VERSE_HERE[\s\S]*/i, '').trim();
+        removeThinking();
+        addMessageWithScripture(clean, sc);
+        setInput(true);
+        return;
+      }
+
+      if (state.phase === 'review_P') {
+        state.reflections.P = userText;
+        state.phase = 'review_A';
+        const sc = pickScripture('A');
+        state.usedScriptures.A = sc;
+        const reply = await ask(userText, `The user reflected on the prayer dimension of their past decision (${state.decision}). Receive what they shared with warmth — 1-2 sentences that honor what they noticed. Then ask ONLY this, with decision-specific examples in parentheses: "Looking back, how accurate were the facts compared to the fears you were carrying at the time?" — give 2 examples in parentheses of what facts vs fears might look like specifically for their decision. Do NOT move to the next step. End your response with exactly: VERSE_HERE`);
+        const clean = reply.replace(/VERSE_HERE[\s\S]*/i, '').trim();
+        removeThinking();
+        addMessageWithScripture(clean, sc);
+        setInput(true);
+        return;
+      }
+
+      if (state.phase === 'review_A') {
+        state.reflections.A = userText;
+        state.phase = 'review_U';
+        const sc = pickScripture('U');
+        state.usedScriptures.U = sc;
+        const reply = await ask(userText, `The user reflected on facts vs fears for their past decision (${state.decision}). Reflect back what you heard in 1-2 sentences — name the specific contrast they described. Then ask ONLY this, with decision-specific examples in parentheses: "Did that choice honor your capacity in that season, or did it stretch you too far?" — give 2 examples in parentheses of what honoring or exceeding capacity might have looked like in their specific situation. Do NOT move to the next step. End your response with exactly: VERSE_HERE`);
+        const clean = reply.replace(/VERSE_HERE[\s\S]*/i, '').trim();
+        removeThinking();
+        addMessageWithScripture(clean, sc);
+        setInput(true);
+        return;
+      }
+
+      if (state.phase === 'review_U') {
+        state.reflections.U = userText;
+        state.phase = 'review_S';
+        const sc = pickScripture('S');
+        state.usedScriptures.S = sc;
+        const reply = await ask(userText, `The user reflected on capacity for their past decision (${state.decision}). Receive what they shared with warmth — 1 sentence. Then ask ONLY this, with decision-specific examples in parentheses: "What scriptures or biblical principles guided you then — and do they still feel relevant today?" — give 2 examples in parentheses of themes that might connect to their specific decision (stewardship, trust, provision, wisdom, courage, peace). Do NOT move to the next step. End your response with exactly: VERSE_HERE`);
+        const clean = reply.replace(/VERSE_HERE[\s\S]*/i, '').trim();
+        removeThinking();
+        addMessageWithScripture(clean, sc);
+        setInput(true);
+        return;
+      }
+
+      if (state.phase === 'review_S') {
+        state.reflections.S = userText;
+        state.phase = 'review_E';
+        const sc = pickScripture('E');
+        state.usedScriptures.E = sc;
+        const reply = await ask(userText, `The user reflected on scripture for their past decision (${state.decision}). Receive what they shared in 1 sentence. Then ask ONLY this, with decision-specific examples in parentheses: "What fruit have you seen since that decision? Has it brought peace and alignment — or something else?" — give 2 examples in parentheses of what fruit or unease might look like specifically for their situation. Do NOT move to the next step. End your response with exactly: VERSE_HERE`);
+        const clean = reply.replace(/VERSE_HERE[\s\S]*/i, '').trim();
+        removeThinking();
+        addMessageWithScripture(clean, sc);
+        setInput(true);
+        return;
+      }
+
+      if (state.phase === 'review_E') {
+        state.reflections.E = userText;
+        state.phase = 'review_journal_offer';
+        const reply = await ask(userText, `The user reflected on the fruit of their past decision (${state.decision}). Receive what they shared with genuine warmth — 2-3 sentences that honor the full arc of what they've reflected on across all five steps, naming something specific about what you heard. Then ask: "Would you like me to create a Review Journal summarizing what you've reflected on and the fruit you've seen?" Do NOT write VERSE_HERE. Stop after your question.`);
+        const eReviewClean = reply.replace(/VERSE_HERE[\s\S]*/i, '').trim();
+        removeThinking();
+        addMessage('companion', eReviewClean || reply);
+        addQuickChoices([
+          { label: 'Yes, create my Review Journal', value: 'review_journal_yes' },
+          { label: "No, I'm done for now", value: 'review_journal_no' }
+        ]);
+        setInput(true);
+        return;
+      }
+
+      if (state.phase === 'review_journal_offer') {
+        const lower = userText.toLowerCase();
+        if (lower.includes('yes') || lower.includes('create') || lower.includes('please') || lower.includes('journal')) {
+          await compileReviewJournal();
+        } else {
+          removeThinking();
+          addMessage('companion', "May you carry what you've learned with grace. God sees your faithfulness — in the decisions that went well and in the ones that taught you something new. Rest in that. 🌿");
+          state.phase = 'done';
+          setTimeout(() => showContinuation(), 600);
+        }
+        return;
+      }
+    }
+
+    // ── Catch-all ──
+    const reply = await ask(userText, 'Respond warmly and helpfully. If the user seems to be trying to navigate the companion, gently guide them back to the flow.');
+    removeThinking();
+    addMessage('companion', reply);
+
+  } catch (err) {
+    removeThinking();
+    const isNetwork = err instanceof TypeError || err.message?.includes('fetch');
+    if (isNetwork) {
+      addMessage('companion', "It looks like something interrupted the connection. Give it a moment, then try again. Your reflection matters. 🌿");
+      setInput(false, "Please refresh to try again.");
+    } else {
+      addMessage('companion', "Something quiet happened on my end. Please try sending your response again — I'm still here. 🌿");
+      setInput(true);
+    }
+    console.error(err);
+  } finally {
+    const closed = ['compiling','done'];
+    setTimeout(() => {
+      if (!closed.includes(state.phase)) {
+        setInput(true, "Share what's on your heart…");
+      }
+    }, 50);
+  }
+}
+
+// ── Choice Handler ─────────────────────────────────────────────────
+async function handleChoice(value) {
+  document.querySelectorAll('.quick-choices').forEach(r => r.remove());
+
+  if (value === '1') {
+    addMessage('user', '1 — Help me work through a decision');
+    state.history.push({ role: 'user', content: '1' });
+    resetState('full');
+    addMessage('companion', "Good. Let's take this one step at a time. 🌿\n\nWhat decision are you facing? Big or small, name what you need clarity on.");
+    setInput(true);
+    return;
+  }
+
+  if (value === '2') {
+    addMessage('user', '2 — I want to reflect on a choice I already made');
+    state.history.push({ role: 'user', content: '2' });
+    resetState('review');
+    addMessage('companion', "Of course. Share the past decision you'd like to reflect on — describe it in your own words, or paste a previous journal if you have one.");
+    setInput(true);
+    return;
+  }
+
+  if (value === 'journal_compile') {
+    addMessage('user', 'Yes, create my journal');
+    state.history.push({ role: 'user', content: 'Yes, please create my journal.' });
+    await compileJournal();
+    return;
+  }
+
+  if (value === 'add_more') {
+    addMessage('user', 'Let me add something');
+    setInput(true, "Share what you'd like to add…");
+    userInput.focus();
+    return;
+  }
+
+  if (value === 'review_journal_yes') {
+    addMessage('user', 'Yes, create my Review Journal');
+    state.history.push({ role: 'user', content: 'Yes, please create my Review Journal.' });
+    await compileReviewJournal();
+    return;
+  }
+
+  if (value === 'review_journal_no') {
+    addMessage('user', "No, I'm done for now");
+    addMessage('companion', "May you carry what you've learned with grace. God sees your faithfulness — in the decisions that went well and in the ones that taught you something new. Rest in that. 🌿");
+    state.phase = 'done';
+    setTimeout(() => showContinuation(), 600);
+    return;
+  }
+
+  if (value === 'new_full') {
+    addMessage('user', 'Work through a new decision');
+    state.history.push({ role: 'user', content: 'I\'d like to work through a new decision.' });
+    resetState('full');
+    addMessage('companion', "Good. Let's take this one step at a time. 🌿\n\nWhat decision are you facing? Big or small, name what you need clarity on.");
+    setInput(true);
+    return;
+  }
+
+  if (value === 'new_review') {
+    addMessage('user', 'Reflect on another past decision');
+    state.history.push({ role: 'user', content: 'I\'d like to reflect on another past decision.' });
+    resetState('review');
+    addMessage('companion', "Of course. Share the past decision you'd like to reflect on — describe it in your own words or paste a previous journal.");
+    setInput(true);
+    return;
+  }
+
+  if (value === 'new_done') {
+    addMessage('user', "I'm done for now");
+    addMessage('companion', "Take good care of yourself. You've done something meaningful today. 🌿");
+    state.phase = 'done';
+    return;
+  }
+}
+
+// ── Input Wiring ───────────────────────────────────────────────────
+function sendMessage() {
+  const text = userInput.value.trim();
+  if (!text) return;
+  userInput.value = '';
+  autoResize(userInput);
+  addMessage('user', text);
+  handleInput(text);
+}
+
+function handleKeyDown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+}
+
+// ── Init ───────────────────────────────────────────────────────────
+function init() {
+  addMessage('companion', "Welcome. I'm glad you're here. 🌿\n\nBefore we begin, which of these feels right for you today?");
+  setTimeout(() => {
+    addQuickChoices([
+      { label: '1 — Help me work through a decision', value: '1' },
+      { label: '2 — I want to reflect on a choice I already made', value: '2' }
+    ]);
+    const last = chatArea.lastElementChild?.querySelector('.bubble');
+    if (last) {
+      const note = document.createElement('p');
+      note.style.cssText = 'font-size:12.5px;color:var(--text-light);margin-top:10px;font-style:italic;';
+      note.textContent = "Or describe what you need and I'll guide us to the right place.";
+      last.appendChild(note);
+    }
+  }, 200);
+
+  state.history.push({
+    role: 'assistant',
+    content: "Welcome. I'm glad you're here. 🌿\n\nBefore we begin, which of these feels right for you today?\n\n1 — Help me work through a decision\n2 — I want to reflect on a choice I already made\n\nOr describe what you need and I'll guide us to the right place."
+  });
+}
+
+init();
+
+</script>
+</body>
+</html>
