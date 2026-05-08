@@ -619,7 +619,7 @@ async function askFresh(instruction) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5',
       max_tokens: 2000,
       system: 'You are a helpful assistant that compiles faith-based decision journals. Return only valid JSON when asked. Never use markdown fences. Never add text before or after the JSON object.',
       messages: [{ role: 'user', content: instruction }]
@@ -645,7 +645,7 @@ async function ask(userText, instruction) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5',
       max_tokens: 1500,
       system: SYSTEM_PROMPT,
       messages
